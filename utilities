@@ -1,0 +1,190 @@
+---
+version: "2"
+services:
+  organizr:
+    image: organizrtools/organizr-v2
+    container_name: organizr
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /var/lib/docker/volumes/organizr:/config
+    ports:
+      - 8383:80
+    restart: unless-stopped
+    
+  letsencrypt:
+    image: linuxserver/letsencrypt
+    container_name: letsencrypt
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - URL=xxxxxxxxxxx.com
+      - SUBDOMAINS=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      - VALIDATION=dns
+      - DNSPLUGIN=cloudflare #optional
+      #- DUCKDNSTOKEN=<token> #optional
+      - EMAIL=<xxxxxxxxxxxxxxxxxxxxxxxxx> #optional
+      - DHLEVEL=2048 #optional
+      - ONLY_SUBDOMAINS=false #optional
+      #- EXTRA_DOMAINS=<extradomains> #optional
+      - STAGING=false #optional
+    volumes:
+      - /var/lib/docker/volumes/letsencrypt:/config
+    ports:
+      - 443:443
+      #- 80:80 #optional
+    restart: unless-stopped
+    
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    environment:
+      - WATCHTOWER_CLEANUP=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  cloudflare-ddns:
+    image: oznu/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    environment:
+      - API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxx
+      - ZONE=xxxxxxxxxxxxxxxxxxxx.com
+      #- SUBDOMAIN=
+      - PROXIED=true
+    restart: unless-stopped
+    
+  guacamole:
+    image: oznu/guacamole
+    container_name: guacamole
+    volumes:
+      - /var/lib/docker/volumes/guacamole:/config
+    ports:
+      - 8888:8080
+    restart: unless-stopped
+    
+  unifi-controller:
+    image: linuxserver/unifi-controller
+    container_name: unifi-controller
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - MEM_LIMIT=1024M #optional
+    volumes:
+      - /var/lib/docker/volumes/unifi:/config
+    ports:
+      - 3478:3478/udp
+      - 10001:10001/udp
+      - 8080:8080
+      - 8081:8081
+      - 8443:8443
+      - 8843:8843
+      - 8880:8880
+      - 6789:6789
+    restart: unless-stopped
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+      - 67:67/udp
+      - 81:80/tcp
+      - 444:443/tcp
+    environment:
+      TZ: Europe/London
+      WEBPASSWORD: xxxxxxxxxxxxxx
+    volumes:
+      - /var/lib/docker/volumes/pihole/:/etc/pihole/
+      - /var/lib/docker/volumes/pihole/dnsmasq.d/:/etc/dnsmasq.d/
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    # Recommended but not required (DHCP needs NET_ADMIN)
+    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    
+  filebrowser:
+    container_name: filebrowser
+    image: filebrowser/filebrowser:latest
+    #environment:
+      #- BASEURL:filebrowser
+      #- DATABASE:/data/db/database.db
+      #- CONFIG:/data/config/.filebrowser.json
+    volumes: 
+      - /var/lib/docker/volumes/filebrowser/data:/data
+      - /:/srv
+      #- /var/lib/docker/volumes/filebrowser/database.db:/database.db
+      - /var/lib/docker/volumes/filebrowser/.filebrowser.json:/.filebrowser.json
+    ports:
+      - 90:80
+    restart: always
+    
+  bitwarden:
+    container_name: bitwarden
+    image: bitwardenrs/server:latest
+    volumes:
+      - /var/lib/docker/volumes/bitwarden/data/:/data/
+    ports:
+      - 2030:80
+    restart: always
+    
+  crashplan-pro:
+    container_name: crashplan-pro
+    image: jlesage/crashplan-pro
+    #environment:
+      #- PUID=0
+      #- PGID=0
+    volumes:
+      # Crashplan-pro container volumes
+      - /var/lib/docker/volumes/crashplan-pro/config/:/config/
+      - /var/lib/docker/volumes/crashplan-pro/storage/:/storage/
+      # Docker server samba share data to backup mapped to /share/media
+      - /share/media/:/share/media/ 
+      # Container volumes to backup mapped to /mnt/dockervolumes - add manually
+      - /var/lib/docker/volumes/bitwarden:/mnt/dockervolumes/bitwarden:ro
+      - /var/lib/docker/volumes/booksonic:/mnt/dockervolumes/booksonic:ro
+      - /var/lib/docker/volumes/calibre:/mnt/dockervolumes/calibre:ro
+      - /var/lib/docker/volumes/calibre-web:/mnt/dockervolumes/calibre-web:ro
+      - /var/lib/docker/volumes/confluence:/mnt/dockervolumes/confluence:ro      
+      - /var/lib/docker/volumes/filebrowser:/mnt/dockervolumes/filebrowser:ro      
+      - /var/lib/docker/volumes/ftps:/mnt/dockervolumes/ftps:ro      
+      - /var/lib/docker/volumes/guacamole:/mnt/dockervolumes/guacamole:ro      
+      - /var/lib/docker/volumes/jackett:/mnt/dockervolumes/jackett:ro      
+      - /var/lib/docker/volumes/jdownloader2:/mnt/dockervolumes/jdownloader2:ro      
+      - /var/lib/docker/volumes/jellyfin:/mnt/dockervolumes/jellyfin:ro      
+      - /var/lib/docker/volumes/lazylibrarian:/mnt/dockervolumes/lazylibrarian:ro      
+      - /var/lib/docker/volumes/letsencrypt:/mnt/dockervolumes/letsencrypt:ro      
+      - /var/lib/docker/volumes/lidarr:/mnt/dockervolumes/lidarr:ro      
+      - /var/lib/docker/volumes/mylar:/mnt/dockervolumes/mylar:ro      
+      - /var/lib/docker/volumes/mysql:/mnt/dockervolumes/mysql:ro      
+      - /var/lib/docker/volumes/nextcloud:/mnt/dockervolumes/nextcloud:ro      
+      - /var/lib/docker/volumes/nordvpn:/mnt/dockervolumes/nordvpn:ro      
+      - /var/lib/docker/volumes/ombi:/mnt/dockervolumes/ombi:ro      
+      - /var/lib/docker/volumes/openproject:/mnt/dockervolumes/openproject:ro      
+      - /var/lib/docker/volumes/organizr:/mnt/dockervolumes/organizr:ro      
+      - /var/lib/docker/volumes/pihole:/mnt/dockervolumes/pihole:ro      
+      - /var/lib/docker/volumes/plex:/mnt/dockervolumes/plex:ro    
+      - /var/lib/docker/volumes/portainer_data:/mnt/dockervolumes/portainer_data:ro      
+      - /var/lib/docker/volumes/postgresql:/mnt/dockervolumes/postgresql:ro      
+      - /var/lib/docker/volumes/qbittorrent:/mnt/dockervolumes/qbittorrent:ro      
+      - /var/lib/docker/volumes/radarr:/mnt/dockervolumes/radarr:ro 
+      - /var/lib/docker/volumes/sabnzbd:/mnt/dockervolumes/sabnzbd:ro    
+      - /var/lib/docker/volumes/sonarr:/mnt/dockervolumes/sonarr:ro      
+      - /var/lib/docker/volumes/tautulli:/mnt/dockervolumes/tautulli:ro      
+      - /var/lib/docker/volumes/transmission:/mnt/dockervolumes/transmission:ro      
+      - /var/lib/docker/volumes/ttrss:/mnt/dockervolumes/ttrss:ro      
+      - /var/lib/docker/volumes/ubooquity:/mnt/dockervolumes/ubooquity:ro      
+      - /var/lib/docker/volumes/unifi:/mnt/dockervolumes/unifi:ro      
+      - /var/lib/docker/volumes/unmanic:/mnt/dockervolumes/unmanic:ro      
+      - /var/lib/docker/volumes/vsftpd:/mnt/dockervolumes/vsftpd:ro         
+    ports:
+      - 5810:5800
+    restart: always
