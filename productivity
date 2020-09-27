@@ -1,0 +1,85 @@
+---
+version: "2"
+services:
+  mariadb:
+    image: mariadb
+    container_name: mariadb
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    ports:
+      - 3306:3306
+    restart: always
+    volumes:
+      - /var/lib/docker/volumes/nextcloud/db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=xxxxxxx
+      - MYSQL_PASSWORD=xxxxxxxxxxx
+      - MYSQL_DATABASE=xxxxxxxx
+      - MYSQL_USER=xxxxxxx
+
+  nextcloud:
+    image: nextcloud
+    container_name: nextcloud
+    ports:
+      - 8088:80
+    #links:
+    #  - db
+    volumes:
+      - /var/lib/docker/volumes/nextcloud/data:/var/www/html
+    restart: always
+
+  collabora:
+    image: collabora/code
+    container_name: collabora
+    ports:
+      - 9980:9980
+    environment:
+      - username=xxxxxx
+      - password=xxxxxxx
+      - domain=www.xxxxxxxxx.com
+    restart: always  
+    
+  confluence:
+    image: atlassian/confluence-server
+    container_name: confluence
+    ports:
+      - 8090:8090
+      - 8091:8091
+    environment:
+      - ATL_PROXY_NAME=www.xxxxxxxxxxxx.com
+      - ATL_TOMCAT_CONTEXTPATH=/confluence
+      - ATL_PROXY_PORT=443
+      - ATL_TOMCAT_SCHEME=https
+      #- SET_PERMISSIONS=false
+    volumes:
+      - /var/lib/docker/volumes/confluence:/var/atlassian/application-data/confluence
+    restart: always
+    
+  postgres:
+  #confluence
+    image: postgres
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=xxxxxxxxx
+      - POSTGRES_DB=xxxxxxxxx
+      - POSTGRES_USER=xxxxxxxxxx
+    ports:
+      - 5432:5432
+      - 5433:5433
+    volumes:
+      - /var/lib/docker/volumes/postgresql/db-data:/var/lib/postgresql/db-data
+      - /var/lib/docker/volumes/postgresql/data:/var/lib/postgresql/data
+    restart: always
+
+  openproject:
+    image: openproject/community:latest
+    container_name: openproject
+    environment:
+      - SECRET_KEY_BASE=xxxxxxxxxxxx
+      - OPENPROJECT_RAILS__RELATIVE__URL__ROOT=/openproject
+      - OPENPROJECT_RAILS__FORCE__SSL=true
+    ports:
+      - 7564:80
+    volumes:
+      - /var/lib/docker/volumes/openproject/pgdata:/var/openproject/pgdata
+      - /var/lib/docker/volumes/openproject/static:/var/openproject/assets
+    restart: always
