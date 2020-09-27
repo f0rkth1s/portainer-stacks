@@ -1,0 +1,15 @@
+---
+version: "2"
+services:
+  ftps:
+    image: mikatux/ftps-server
+    container_name: ftps
+    environment:
+      - USER=XXXXXX
+    volumes:
+#    - /var/lib/docker/volumes/ftps/data:/home/XXXXXX
+      - /share/media/Backups/GVC/dbs:/home/XXXXXX
+    ports:
+      - 21:21
+      - 3000-3010:3000-3010
+    restart: always
