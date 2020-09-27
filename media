@@ -1,0 +1,199 @@
+version: '2'
+services:
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker
+    restart: always
+    ports:
+      - 32400:32400/tcp
+      #- 3005:3005/tcp
+      - 8324:8324/tcp
+      - 32469:32469/tcp
+      #- 1900:1900/udp
+      - 32410:32410/udp
+      - 32412:32412/udp
+      - 32413:32413/udp
+      - 32414:32414/udp
+    environment:
+      - TZ=Europe/London
+      - PLEX_CLAIM=xxxxxxxxxxxxxxxxxxx
+      - ADVERTISE_IP=http://192.168.0.17:32400/
+    #hostname: xxxxxxxxxxxx
+    volumes:
+      - /var/lib/docker/volumes/plex/config:/config
+      - /var/lib/docker/volumes/plex/transcode:/transcode
+      #- /var/lib/docker/volumes/plex/data:/data
+      - /mnt/unraid/share:/mnt/unraid/share  #unraid
+      - /share/media:/share/media            #docker fileshare
+  
+  tautulli:
+    container_name: tautulli
+    image: tautulli/tautulli
+    restart: unless-stopped
+    environment:
+      - PGID=1000
+      - PUID=1000
+    ports:
+      - 9002:8181
+    volumes:
+      - /var/lib/docker/volumes/tautulli/config:/config
+      - /var/lib/docker/volumes/plex/config/Library/Application Support/Plex Media Server/Logs:/plex_logs:ro      
+      - /share/media/Backups/Tautulli:/config/backups
+
+  jellyfin:
+    container_name: jellyfin
+    image: jellyfin/jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+    network_mode: "host"
+    volumes:
+      - /var/lib/docker/volumes/jellyfin/config:/config
+      - /var/lib/docker/volumes/jellyfin/cache:/cache
+      - /mnt/unraid/share:/media
+      - /share/media:/share/media
+
+        
+  ttrss-postgres:
+    container_name: ttrss-postgres
+    image: postgres:9.6
+    environment:
+      - POSTGRES_USER=xxxxxxx
+      - POSTGRES_PASSWORD=xxxxxxxxx
+      - POSTGRES_DB=xxxxxxxxxxxx
+    volumes:
+      - /var/lib/docker/volumes/ttrss/postgres/data:/var/lib/postgresql/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 5434:5432
+    #networks:
+    #  - ttrss-net
+    restart: always
+    
+  ttrss:
+    container_name: ttrss
+    image: marvin21/tinytinyrss:latest
+    restart: always
+    depends_on:
+      - ttrss-postgres
+    environment:
+      - TTRSS_DATABASE_TYPE=pgsql
+      - TTRSS_DATABASE_HOST=192.168.0.17
+      - TTRSS_DATABASE_PORT=5434
+      - TTRSS_DATABASE_USER=xxxxxxxxxx
+      - TTRSS_DATABASE_PASSWORD=xxxxxxxxxxx
+      - TTRSS_DATABASE_NAME=xxxxxxxxxxx
+      - TTRSS_URI=http://tt-rss.xxxxxxxxx/
+      - REFRESH_INTERVAL_MINUTES=15
+      - PUID=1000
+      - PGID=1000
+    ports:
+      - 9898:8080
+    volumes:
+      - /var/lib/docker/volumes/ttrss/config:/config
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    #networks:
+    #  - ttrss-net  
+    
+  booksonic:
+    image: linuxserver/booksonic
+    container_name: booksonic
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - CONTEXT_PATH=booksonic
+    volumes:
+      - /var/lib/docker/volumes/booksonic/config:/config
+      - /mnt/unraid/share/audiobooks:/audiobooks
+      - /mnt/unraid/share/podcasts:/podcasts
+      #- /path/to/othermedia:/othermedia
+    ports:
+      - 4040:4040
+    restart: always
+    
+  ubooquity:
+    image: linuxserver/ubooquity
+    container_name: ubooquity
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - MAXMEM=1024
+    volumes:
+      - /var/lib/docker/volumes/ubooquity/config:/config
+      - /mnt/unraid/share/books:/books
+      - /mnt/unraid/share/comics:/comics
+      - /mnt/unraid/share/magazines:/magazines
+      - /mnt/unraid/share/Hobby:/hobby
+      - /var/lib/docker/volumes/ubooquity/files:/files
+    ports:
+      - 2202:2202
+      - 2203:2203
+    restart: always
+
+  calibre:
+    image: linuxserver/calibre
+    container_name: calibre
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - GUAC_USER=xxxxxxx #optional
+      - GUAC_PASS=xxxxxxxxxxxxxxx #optional soei8hy7g
+      - UMASK_SET=022 #optional
+      - CLI_ARGS= #optional
+    volumes:
+      - /var/lib/docker/volumes/calibre/config:/config
+      - /mnt/unraid/share/books:/books
+      - /mnt/unraid/share/Hobby:/hobby
+    ports:
+      - 8084:8080
+      - 8085:8081
+    restart: unless-stopped
+    
+  calibre-web:
+    image: linuxserver/calibre-web
+    container_name: calibre-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - DOCKER_MODS=linuxserver/calibre-web:calibre
+    volumes:
+      - /var/lib/docker/volumes/calibre-web/config:/config
+      - /var/lib/docker/volumes/calibre/config:/books
+    ports:
+      - 8083:8083
+    restart: unless-stopped
+    
+  unmanic:
+    container_name: unmanic
+    image: josh5/unmanic:latest
+    environment:
+      - PGID=1000
+      - PUID=1000
+    ports:
+      - 8889:8888
+    volumes:
+      - /var/lib/docker/volumes/unmanic/config:/config
+      - /var/lib/docker/volumes/unmanic/tmp:/tmp/unmanic
+      - /mnt/unraid/share/Movies:/library
+      
+  bazarr:
+    image: linuxserver/bazarr
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - UMASK_SET=022 #optional
+    volumes:
+      - /var/lib/docker/volumes/bazarr/config:/config
+      - /mnt/unraid/share/Movies:/movies
+      - /mnt/unraid/share/TV Shows:/tv
+    ports:
+      - 6767:6767
+    restart: unless-stopped
